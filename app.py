@@ -228,7 +228,6 @@ st.markdown(f"""
 
 # 标题
 st.title("🏠 房产成交数据看板")
-st.markdown(f"<p style='color: {current_theme['subtext_color']}; margin-bottom: 20px;'>实时整合每日网签数据,助您洞察市场动态。</p>", unsafe_allow_html=True)
 
 # 加载数据
 @st.cache_data(ttl=60)
@@ -240,19 +239,43 @@ def get_data():
 with st.spinner('正在读取并整合数据...'):
     df = get_data()
 
-if df.empty:
+# 获取最新数据日期
+if not df.empty:
+    latest_date = df['日期'].max()
+    st.markdown(f"""
+    <div style='display: flex; align-items: center; gap: 10px; margin-bottom: 20px;'>
+        <p style='color: {current_theme['subtext_color']}; margin: 0;'>实时整合每日网签数据,助您洞察市场动态。</p>
+        <span style='background-color: rgba(102, 126, 234, 0.1); color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;'>
+            📅 数据更新至: {latest_date.strftime('%Y年%m月%d日')}
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown(f"<p style='color: {current_theme['subtext_color']}; margin-bottom: 20px;'>实时整合每日网签数据,助您洞察市场动态。</p>", unsafe_allow_html=True)
     st.warning("当前目录下未找到有效的 Excel 数据文件,请确保文件名包含日期(如 '2025年11月22日')。")
     st.stop()
 
 # --- 主内容区筛选面板 (作为侧边栏的替代) ---
-with st.expander("🔍 **筛选与搜索**", expanded=True):
+# 初始化筛选面板展开状态
+if 'filter_expanded' not in st.session_state:
+    st.session_state.filter_expanded = True
+
+def close_filter_panel():
+    st.session_state.filter_expanded = False
+
+with st.expander("🔍 **筛选与搜索**", expanded=st.session_state.filter_expanded):
     st.markdown("### 数据筛选")
     
     col_f1, col_f2 = st.columns(2)
     
     with col_f1:
         # 模糊搜索
-        search_term_main = st.text_input("🔎 搜索小区名", placeholder="输入关键词,如 '绿城'", key="search_main")
+        search_term_main = st.text_input(
+            "🔎 搜索小区名", 
+            placeholder="输入关键词,如 '绿城'", 
+            key="search_main",
+            on_change=close_filter_panel  # 搜索时自动折叠
+        )
         
         # 日期筛选
         min_date = df['日期'].min().date()
